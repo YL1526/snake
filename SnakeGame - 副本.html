@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇</title>
+    <style>
+        /* 清空样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 最大外框 */
+        #mian {
+            width: 360px;
+            height: 420px;
+            border: #000 solid 10px;
+            background-color: #b7d4a8;
+            border-radius: 20px;
+            margin: 50px auto;
+        }
+
+        /* 游戏视口 */
+        #stage {
+            width: 304px;
+            height: 304px;
+            border: #000 solid 2px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        /* 分数 */
+        #info {
+            width: 304px;
+            margin: 30px auto;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 食物 */
+        #food {
+            width: 10px;
+            height: 10px;
+            position: absolute;
+            top: 100px;
+            left: 120px;
+            display: flex;
+            flex-flow: wrap;
+        }
+
+        #food>div {
+            width: 5px;
+            height: 5px;
+            background-color: #000;
+            /* 小花形状的食物(旋转) */
+            transform: rotate(45deg);
+        }
+
+        /* 蛇 */
+        #snake>div {
+            width: 10px;
+            height: 10px;
+            background-color: #000;
+            position: absolute;
+            border: #b7d4a8 1px solid;
+        }
+
+        /* 方向按钮样式 */
+        #direction-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #direction-buttons button {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            margin: 0 10px;
+            border: none;
+            background-color: #f9c2ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #direction-buttons button:hover {
+            background-color: #eaa8f6;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 最大外框 -->
+    <div id="mian">
+        <!-- 游戏视口 -->
+        <div id="stage">
+            <!-- 蛇 -->
+            <div id="snake">
+                <div></div>
+            </div>
+            <!-- 食物 -->
+            <div id="food">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+        <!-- 分数 -->
+        <div id="info">
+            <div>SCORE:<span id="score">0</span></div>
+            <div>LEVEL:<span id="level">1</span></div>
+        </div>
+    </div>
+    <!-- 方向按钮 -->
+    <div id="direction-buttons">
+        <button id="up-button">↑</button>
+        <button id="down-button">↓</button>
+        <button id="left-button">←</button>
+        <button id="right-button">→</button>
+    </div>
+    <script src="./snake.js"></script>
+    <script>
+        // 获取蛇的容器
+        let snake = document.getElementById("snake");
+        // 获取蛇的各个部位
+        let snakeBody = snake.getElementsByTagName("div");
+        // 获取食物
+        let food = document.getElementById("food");
+        // 获取分数和等级
+        let scoreSpan = document.getElementById("score");
+        let levelSpan = document.getElementById("level");
+        // 记录分数和等级
+        let score = 0;
+        let level = 0;
+        // 蛇的移动方向
+        let dir = "ArrowDown";
+        // 记录按键是否生效
+        let keyActive = true;
+        // 有效按键
+        let keyArr = [
+            "ArrowUp", "w", "W",
+            "ArrowDown", "s", "S",
+            "ArrowLeft", "a", "A",
+            "ArrowRight", "d", "D"
+        ];
+        // 存储按键相反值
+        let reObj = {
+            "ArrowUp": ["ArrowDown", "s", "S"],
+            "w": ["ArrowDown", "s", "S"],
+            "W": ["ArrowDown", "s", "S"],
+            "ArrowDown": ["ArrowUp", "w", "W"],
+            "s": ["ArrowUp", "w", "W"],
+            "S": ["ArrowUp", "w", "W"],
+            "ArrowLeft": ["ArrowRight", "d", "D"],
+            "a": ["ArrowRight", "d", "D"],
+            "A": ["ArrowRight", "d", "D"],
+            "ArrowRight": ["ArrowLeft", "a", "A"],
+            "d": ["ArrowLeft", "a", "A"],
+            "D": ["ArrowLeft", "a", "A"],
+        };
+        // 获取方向按钮
+        let upButton = document.getElementById("up-button");
+        let downButton = document.getElementById("down-button");
+        let leftButton = document.getElementById("left-button");
+        let rightButton = document.getElementById("right-button");
+
+        // 绑定方向按钮点击事件
+        upButton.addEventListener("click", () => {
+            dir = "ArrowUp";
+        });
+        downButton.addEventListener("click", () => {
+            dir = "ArrowDown";
+        });
+        leftButton.addEventListener("click", () => {
+            dir = "ArrowLeft";
+        });
+        rightButton.addEventListener("click", () => {
+            dir = "ArrowRight";
+        });
+        /* 绑定按键事件 */
+        document.addEventListener("keydown", (event) => {
+            // 判断是否有效按键
+            if (keyActive && keyArr.includes(event.key)) {
+                // 如果身体为一个时，不需要判断掉头
+                // if (snakeBody.length < 2) {
+                //     // 设置方向
+                //     dir = event.key;
+                // } else {
+                //     // 防止掉头
+                //     if (!reObj[dir].includes(event.key)) {
+                //         // 设置方向
+                //         dir = event.key;
+                //     }
+                // }
+                // 对上面代码进行优化
+                if (snakeBody.length < 2 || !reObj[dir].includes(event.key)) {
+                    // 设置方向
+                    dir = event.key;
+                    // 将按键设置为失效
+                    keyActive = false;
+                }
+            };
+        });
+        // 设置定时器，定时移动方向
+        setTimeout(function move() {
+            // 获取蛇头
+            let snakeHead = snakeBody[0];
+            // 获取蛇头的坐标
+            let x = snakeHead.offsetLeft;
+            let y = snakeHead.offsetTop;
+            // 循坏
+            // 判断按键
+            switch (dir) {
+                case "ArrowUp": case "w": case "W":
+                    y -= 10;
+                    break;
+                case "ArrowDown": case "s": case "S":
+                    y += 10;
+                    break;
+                case "ArrowLeft": case "a": case "A":
+                    x -= 10;
+                    break;
+                case "ArrowRight": case "d": case "D":
+                    x += 10;
+                    break;
+            };
+            // 检查蛇是否吃到食物
+            if (snakeHead.offsetTop === food.offsetTop &&
+                snakeHead.offsetLeft === food.offsetLeft) {
+                // 刷新食物的位置
+                changeFood();
+                // 增加身体部位
+                snake.insertAdjacentHTML("beforeend", "<div></div>");
+                // 增加分数
+                score++;
+                scoreSpan.textContent = score;
+                // 判断是否升级(每三分一级,最高12级)
+                if (score % 3 === 0 && score < 12) {
+                    // 增加等级
+                    level++;
+                    levelSpan.textContent = level + 1;
+                }
+            };
+            // 判断是否撞墙
+            if (x < 0 || x > 290 || y < 0 || y > 290) {
+                // 发送请求
+                fetch('/saveScore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        playerName: '玩家姓名',
+                        score: score,  // 替换为实际的分数
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                    });
+                alert("撞到墙了,游戏结束");
+                // 退出定时器执行的方法方法
+                return;
+            }
+            // 判断是否撞到自己
+            for (let index = 0; index < snakeBody.length - 1; index++) {
+                if (snakeBody[index].offsetLeft === x && snakeBody[index].offsetTop === y) {
+                    // 发送请求
+                    fetch('/saveScore', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            playerName: '玩家姓名',
+                            score: score,  // 替换为实际的分数
+                        }),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log(data);
+                        });
+                    alert("撞到自己了,游戏结束");
+                    return;
+                }
+            }
+            // 获取尾巴
+            let tail = snakeBody[snakeBody.length - 1];
+            // 尾巴替换蛇头的位置
+            tail.style.left = x + "px";
+            tail.style.top = y + "px";
+            // 蛇头和尾巴互换位置
+            snake.insertAdjacentElement("afterbegin", tail);
+            // 蛇移动时，重新设置按键生效
+            keyActive = true;
+            // 循环定时器
+            setTimeout(move, 300 - level * 10);
+        }, 300);
+        // 生成食物
+        function changeFood() {
+            // 食物的坐标 0-290 且是要10的倍数的随机数
+            let x = Math.floor(Math.random() * 30) * 10;
+            let y = Math.floor(Math.random() * 30) * 10;
+            food.style.left = x + "px";
+            food.style.top = y + "px";
+        }
+    </script>
+</body>
+
+</html>
